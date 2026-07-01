@@ -15,13 +15,13 @@ pn.extension('tabulator', notifications=True)
 
 def get_disciplinas():
     try:
-        return pd.read_sql_query("SELECT id_disciplina, nome, carga_horaria FROM Disciplina", engine)
+        return pd.read_sql_query("SELECT id_disciplina, nome, carga_horaria FROM Disciplina ORDER BY id_disciplina", engine)
     except Exception:
         return pd.DataFrame(columns=['id_disciplina', 'nome', 'carga_horaria'])
 
 def get_usuarios():
     try:
-        return pd.read_sql_query("SELECT id_usuario, nome, cpf, email FROM Usuario", engine)
+        return pd.read_sql_query("SELECT id_usuario, nome, cpf, email FROM Usuario ORDER BY id_usuario", engine)
     except Exception:
         return pd.DataFrame(columns=['id_usuario', 'nome', 'cpf', 'email'])
 
@@ -31,7 +31,8 @@ tabela_usuarios = pn.widgets.Tabulator(get_usuarios(), selectable=True)
 nome_disc_input = pn.widgets.TextInput(name="Nome da Disciplina")
 carga_disc_input = pn.widgets.IntInput(name="Carga Horária", value=64, step=1)
 
-btn_salvar_disc = pn.widgets.Button(name="Salvar Disciplina", button_type="primary")
+btn_salvar_disc = pn.widgets.Button(name="Salvar Nova", button_type="success")
+btn_atualizar_disc = pn.widgets.Button(name="Atualizar Selecionada", button_type="warning")
 btn_del_disc = pn.widgets.Button(name="Deletar Selecionada", button_type="danger")
 
 def inserir_disc(event):
@@ -47,6 +48,27 @@ def inserir_disc(event):
         pn.state.notifications.success("Disciplina salva com sucesso!")
     except Exception as e: 
         pn.state.notifications.error("Erro ao salvar disciplina.")
+        print(e)
+
+def atualizar_disc(event):
+    selecao = tabela_disciplinas.selection
+    if not selecao:
+        pn.state.notifications.warning("Selecione uma disciplina na tabela para atualizar.")
+        return
+    if not nome_disc_input.value:
+        pn.state.notifications.warning("Preencha o novo nome nos campos de texto.")
+        return
+    try:
+        id_val = int(tabela_disciplinas.value.iloc[selecao[0]]['id_disciplina'])
+        with engine.begin() as conn:
+            conn.execute(sa.text("UPDATE Disciplina SET nome = :n, carga_horaria = :c WHERE id_disciplina = :id"),
+                         {"n": nome_disc_input.value, "c": carga_disc_input.value, "id": id_val})
+        nome_disc_input.value = ''
+        tabela_disciplinas.selection = []
+        tabela_disciplinas.value = get_disciplinas()
+        pn.state.notifications.success("Disciplina atualizada com sucesso!")
+    except Exception as e:
+        pn.state.notifications.error("Erro ao atualizar disciplina.")
         print(e)
 
 def deletar_disc(event):
@@ -67,12 +89,13 @@ def deletar_disc(event):
         print(e)
 
 btn_salvar_disc.on_click(inserir_disc)
+btn_atualizar_disc.on_click(atualizar_disc)
 btn_del_disc.on_click(deletar_disc)
 
 aba_disciplinas = pn.Column(
     pn.pane.Markdown("## 📚 Gerenciar Disciplinas"),
     pn.Row(nome_disc_input, carga_disc_input),
-    pn.Row(btn_salvar_disc, btn_del_disc),
+    pn.Row(btn_salvar_disc, btn_atualizar_disc, btn_del_disc),
     tabela_disciplinas
 )
 
@@ -80,8 +103,9 @@ nome_usu_input = pn.widgets.TextInput(name="Nome do Usuário", placeholder="Ex: 
 cpf_usu_input = pn.widgets.TextInput(name="CPF", placeholder="Ex: 123.456.789-00")
 email_usu_input = pn.widgets.TextInput(name="E-mail", placeholder="Ex: joao@alu.ufc.br")
 
-btn_salvar_usu = pn.widgets.Button(name="Salvar Usuário", button_type="success")
-btn_del_usu = pn.widgets.Button(name="Deletar Selecionada", button_type="danger")
+btn_salvar_usu = pn.widgets.Button(name="Salvar Novo", button_type="success")
+btn_atualizar_usu = pn.widgets.Button(name="Atualizar Selecionado", button_type="warning")
+btn_del_usu = pn.widgets.Button(name="Deletar Selecionado", button_type="danger")
 
 def inserir_usu(event):
     if not nome_usu_input.value or not cpf_usu_input.value: 
@@ -98,6 +122,29 @@ def inserir_usu(event):
         pn.state.notifications.success("Usuário salvo com sucesso!")
     except Exception as e: 
         pn.state.notifications.error("Erro ao salvar usuário.")
+        print(e)
+
+def atualizar_usu(event):
+    selecao = tabela_usuarios.selection
+    if not selecao:
+        pn.state.notifications.warning("Selecione um usuário na tabela para atualizar.")
+        return
+    if not nome_usu_input.value or not cpf_usu_input.value:
+        pn.state.notifications.warning("Preencha os novos dados (nome e CPF) nos campos de texto.")
+        return
+    try:
+        id_val = int(tabela_usuarios.value.iloc[selecao[0]]['id_usuario'])
+        with engine.begin() as conn:
+            conn.execute(sa.text("UPDATE Usuario SET nome = :n, cpf = :c, email = :e WHERE id_usuario = :id"),
+                         {"n": nome_usu_input.value, "c": cpf_usu_input.value, "e": email_usu_input.value, "id": id_val})
+        nome_usu_input.value = ''
+        cpf_usu_input.value = ''
+        email_usu_input.value = ''
+        tabela_usuarios.selection = []
+        tabela_usuarios.value = get_usuarios()
+        pn.state.notifications.success("Usuário atualizado com sucesso!")
+    except Exception as e:
+        pn.state.notifications.error("Erro ao atualizar usuário.")
         print(e)
 
 def deletar_usu(event):
@@ -118,12 +165,13 @@ def deletar_usu(event):
         print(e)
 
 btn_salvar_usu.on_click(inserir_usu)
+btn_atualizar_usu.on_click(atualizar_usu)
 btn_del_usu.on_click(deletar_usu)
 
 aba_usuarios = pn.Column(
     pn.pane.Markdown("## 👥 Gerenciar Usuários"),
     pn.Row(nome_usu_input, cpf_usu_input, email_usu_input),
-    pn.Row(btn_salvar_usu, btn_del_usu),
+    pn.Row(btn_salvar_usu, btn_atualizar_usu, btn_del_usu),
     tabela_usuarios
 )
 

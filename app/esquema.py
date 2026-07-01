@@ -9,9 +9,8 @@ class Disciplina(Base):
     carga_horaria = Column(Integer, nullable=False)
 
 class Usuario(Base):
-    __tablename__ = "usuario"
+    __tablename__ = "usuario" 
 
     id_usuario = Column(Integer, primary_key=True, index=True)
     nome = Column(String(100), nullable=False)
-    cpf = Column(String(14), unique=True, nullable=False) # <- Linha adicionada
     email = Column(String(100), unique=True, nullable=False)
